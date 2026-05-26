@@ -1,0 +1,790 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Blokade Selat Hormuz 2026 — Dashboard</title>
+  <link href="https://fonts.googleapis.com/css2?family=Anton&family=Hanken+Grotesk:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    
+    :root {
+      --bg: #13100c;
+      --panel: #1d1812;
+      --panel2: #241d15;
+      --line: #3a2f23;
+      --cream: #f4ead8;
+      --muted: #9c8a74;
+      --amber: #ff8a2b;
+      --red: #e8503a;
+      --blue: #3a9ce8;
+    }
+
+    body {
+      font-family: 'Hanken Grotesk', sans-serif;
+      background: var(--bg);
+      color: var(--cream);
+      min-height: 100vh;
+      padding: 18px;
+      background-image:
+        radial-gradient(1200px 600px at 70% -10%, rgba(255, 138, 43, 0.1), transparent 60%),
+        radial-gradient(900px 500px at 0% 110%, rgba(58, 156, 232, 0.07), transparent 60%);
+    }
+
+    .wrap { max-width: 1280px; margin: 0 auto; }
+
+    .header {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: flex-end;
+      justify-content: space-between;
+      gap: 14px;
+      border-bottom: 1px solid var(--line);
+      padding-bottom: 16px;
+      margin-bottom: 16px;
+    }
+
+    .kicker {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px;
+      letter-spacing: 3px;
+      color: var(--amber);
+      text-transform: uppercase;
+    }
+
+    .title {
+      font-family: 'Anton', sans-serif;
+      font-size: clamp(30px, 5.4vw, 58px);
+      line-height: 0.95;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      margin: 6px 0 0 0;
+    }
+
+    .title .accent { color: var(--amber); }
+
+    .subtitle {
+      color: var(--muted);
+      font-size: 13px;
+      max-width: 520px;
+      margin-top: 6px;
+    }
+
+    .statstrip {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .stat {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 8px 12px;
+      min-width: 84px;
+    }
+
+    .stat b {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 18px;
+      display: block;
+    }
+
+    .stat small {
+      color: var(--muted);
+      font-size: 10px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1.55fr 1fr;
+      gap: 16px;
+      margin-top: 16px;
+    }
+
+    @media (max-width: 880px) {
+      .grid { grid-template-columns: 1fr; }
+    }
+
+    .card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      padding: 14px;
+      position: relative;
+    }
+
+    .maphead {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 8px;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .maptitle {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      letter-spacing: 2px;
+      color: var(--muted);
+      text-transform: uppercase;
+    }
+
+    .toggle {
+      display: flex;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      overflow: hidden;
+    }
+
+    .toggle button {
+      background: transparent;
+      color: var(--muted);
+      border: 0;
+      padding: 6px 12px;
+      font-size: 11px;
+      font-family: 'JetBrains Mono', monospace;
+      letter-spacing: 1px;
+      cursor: pointer;
+      transition: all 0.15s ease;
+    }
+
+    .toggle button.on {
+      background: var(--amber);
+      color: #1a1209;
+      font-weight: 700;
+    }
+
+    .map-svg {
+      width: 100%;
+      height: auto;
+      display: block;
+      cursor: default;
+      background: radial-gradient(1200px 600px at 50% 50%, #1c241f, #161311);
+      border-radius: 10px;
+    }
+
+    .marker {
+      cursor: pointer;
+      transition: transform 0.15s ease;
+    }
+
+    .marker circle { transition: r 0.15s ease, stroke-width 0.15s ease; }
+
+    svg text { user-select: none; pointer-events: none; }
+
+    .legend {
+      display: flex;
+      gap: 14px;
+      flex-wrap: wrap;
+      margin-top: 10px;
+      font-size: 11px;
+      color: var(--muted);
+    }
+
+    .legend i {
+      display: inline-block;
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      margin-right: 5px;
+      vertical-align: middle;
+    }
+
+    /* Detail panel */
+    .empty {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      height: 100%;
+      min-height: 360px;
+      color: var(--muted);
+    }
+
+    .empty .big {
+      font-family: 'Anton', sans-serif;
+      font-size: 46px;
+      color: var(--line);
+      letter-spacing: 1px;
+    }
+
+    .empty p { max-width: 240px; margin-top: 10px; }
+
+    .detail-top {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .flag { font-size: 40px; line-height: 1; }
+
+    .cname {
+      font-family: 'Anton', sans-serif;
+      font-size: 30px;
+      letter-spacing: 0.5px;
+      text-transform: uppercase;
+      line-height: 1;
+    }
+
+    .badges {
+      display: flex;
+      gap: 6px;
+      flex-wrap: wrap;
+      margin-top: 8px;
+    }
+
+    .badge {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 1px;
+      padding: 4px 9px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      text-transform: uppercase;
+    }
+
+    .bigchg {
+      font-family: 'Anton', sans-serif;
+      font-size: 54px;
+      line-height: 1;
+      margin: 14px 0 2px 0;
+    }
+
+    .row {
+      display: flex;
+      gap: 10px;
+      margin: 12px 0;
+    }
+
+    .mini {
+      flex: 1;
+      background: var(--panel2);
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 9px 11px;
+    }
+
+    .mini small {
+      color: var(--muted);
+      font-size: 10px;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      display: block;
+    }
+
+    .mini b {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 16px;
+    }
+
+    .note {
+      background: var(--panel2);
+      border-left: 3px solid var(--amber);
+      border-radius: 8px;
+      padding: 11px 13px;
+      font-size: 13px;
+      line-height: 1.5;
+      margin-top: 6px;
+    }
+
+    .note.anom-tahan { border-left-color: #4cc38a; }
+    .note.anom-paradoks { border-left-color: var(--red); }
+
+    .src {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10.5px;
+      color: var(--muted);
+      margin-top: 7px;
+    }
+
+    .anombadge {
+      display: inline-block;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 1px;
+      padding: 3px 8px;
+      border-radius: 6px;
+      text-transform: uppercase;
+      margin-bottom: 8px;
+    }
+
+    .chart-container {
+      height: 150px;
+      margin-top: 14px;
+      position: relative;
+    }
+
+    .footer {
+      color: var(--muted);
+      font-size: 11px;
+      text-align: center;
+      margin-top: 18px;
+      font-family: 'JetBrains Mono', monospace;
+      letter-spacing: 1px;
+    }
+
+    @keyframes pulse {
+      0% { r: 6; opacity: 0.7; }
+      100% { r: 34; opacity: 0; }
+    }
+
+    .pulse-ring {
+      animation: pulse 2.4s ease-out infinite;
+    }
+
+    .hormone-marker { opacity: 0; pointer-events: none; }
+    .hormone-marker.active { opacity: 1; }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <!-- HEADER -->
+    <div class="header">
+      <div>
+        <div class="kicker">WI2002 · LiDIA · K21 · Kelompok 2</div>
+        <h1 class="title">Blokade Selat <span class="accent">Hormuz</span> 2026</h1>
+        <p class="subtitle">Dashboard interaktif variabilitas harga BBM 19 negara. Klik titik negara pada peta — episentrum (◎) adalah Selat Hormuz.</p>
+      </div>
+      <div class="statstrip">
+        <div class="stat"><b id="stat-n">19</b><small>Negara</small></div>
+        <div class="stat"><b id="stat-mean">21.53%</b><small>Rata-rata</small></div>
+        <div class="stat"><b>r=0,344</b><small>Korelasi</small></div>
+      </div>
+    </div>
+
+    <!-- GRID -->
+    <div class="grid">
+      <!-- MAP -->
+      <div class="card">
+        <div class="maphead">
+          <span class="maptitle">Peta Sebaran · Lonjakan Harga BBM</span>
+          <div class="toggle">
+            <button id="mode-status" class="on" onclick="setMode('status')">Status</button>
+            <button id="mode-spike" onclick="setMode('spike')">Lonjakan</button>
+          </div>
+        </div>
+
+        <svg id="map-svg" class="map-svg" viewBox="0 0 1000 500" preserveAspectRatio="xMidYMid meet"></svg>
+
+        <div class="legend" id="legend"></div>
+      </div>
+
+      <!-- DETAIL PANEL -->
+      <div class="card" id="detail-panel">
+        <div class="empty">
+          <div class="big">◎</div>
+          <p>Klik salah satu negara di peta untuk melihat data harga, model regresi, dan analisis anomalinya.</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="footer">DATA: The Global Economy · Trading Economics · Global Petrol Prices · Jan–Apr 2026</div>
+  </div>
+
+  <script>
+    /* DATA */
+    const COUNTRIES = [
+      { id: "sa", name: "Arab Saudi", flag: "🇸🇦", benua: "Asia", status: "Eksportir", dist: 820, lon: 45, lat: 24, p: [0.62, 0.62, 0.62, 0.70], chg: 12.90, note: "Produsen besar dengan subsidi domestik parsial sehingga kenaikan harga tertahan." },
+      { id: "ae", name: "Uni Emirat Arab", flag: "🇦🇪", benua: "Asia", status: "Eksportir", dist: 320, lon: 54, lat: 24, p: [0.66, 0.63, 0.68, 0.89], chg: 34.85, anomaly: "paradoks", note: "PARADOKS TERBESAR. Jarak terdekat (320 km) & eksportir, tapi naik 34,85%. Subsidi BBM minimal sejak 2015 → harga domestik ikut pasar global tanpa buffer.", src: "Statista (Mei 2026): diesel UAE naik >85%." },
+      { id: "id", name: "Indonesia", flag: "🇮🇩", benua: "Asia", status: "Eksportir", dist: 6600, lon: 118, lat: -2, p: [0.60, 0.60, 0.59, 0.72], chg: 20.00, note: "Eksportir neto secara agregat, namun tetap impor BBM olahan. Cadangan BBM nasional hanya ~20 hari saat krisis." },
+      { id: "jp", name: "Jepang", flag: "🇯🇵", benua: "Asia", status: "Importir", dist: 8100, lon: 138, lat: 36, p: [1.02, 1.01, 1.11, 1.11], chg: 8.82, anomaly: "tahan", note: "Importir tapi tahan (8,82%). Melepas cadangan minyak strategis (SPR) ke pasar domestik untuk memutus rantai kepanikan.", src: "Wikipedia — 2026 Iran war fuel crisis." },
+      { id: "dk", name: "Denmark", flag: "🇩🇰", benua: "Eropa", status: "Importir", dist: 5200, lon: 10, lat: 56, p: [2.22, 2.26, 2.54, 2.18], chg: -1.80, anomaly: "tahan", note: "SATU-SATUNYA YANG TURUN (-1,80%). 94,4% pembelian mobil baru sudah listrik + pajak listrik dipotong 72,7→0,8 øre/kWh efektif Jan 2026. Demand bensin sangat rendah.", src: "Mobility Denmark; KPMG Tax Flash (Feb 2026)." },
+      { id: "de", name: "Jerman", flag: "🇩🇪", benua: "Eropa", status: "Importir", dist: 4600, lon: 10, lat: 51, p: [2.19, 2.18, 2.47, 2.52], chg: 15.07, note: "Pajak energi EU tinggi → harga awal sudah mahal, kenaikan persentase moderat." },
+      { id: "gb", name: "Inggris", flag: "🇬🇧", benua: "Eropa", status: "Importir", dist: 5600, lon: -2, lat: 53, p: [1.77, 1.79, 1.99, 1.97], chg: 11.30, note: "Pasar dengan komponen pajak tinggi; kenaikan moderat." },
+      { id: "ng", name: "Nigeria", flag: "🇳🇬", benua: "Afrika", status: "Importir", dist: 5600, lon: 8, lat: 9, p: [0.60, 0.76, 0.90, 0.88], chg: 46.67, note: "Importir BBM olahan meski produsen minyak mentah (kilang tak memadai) → sangat rentan, naik tinggi." },
+      { id: "eg", name: "Mesir", flag: "🇪🇬", benua: "Afrika", status: "Importir", dist: 2200, lon: 30, lat: 27, p: [0.41, 0.40, 0.42, 0.43], chg: 4.88, note: "Subsidi BBM kuat menahan harga domestik meski lokasinya dekat Hormuz." },
+      { id: "za", name: "Afrika Selatan", flag: "🇿🇦", benua: "Afrika", status: "Eksportir", dist: 6400, lon: 24, lat: -29, p: [1.26, 1.26, 1.20, 1.36], chg: 7.94, note: "Bauran energi beragam + subsidi parsial → kenaikan kecil." },
+      { id: "us", name: "Amerika Serikat", flag: "🇺🇸", benua: "Amerika Utara", status: "Eksportir", dist: 11400, lon: -98, lat: 39, p: [0.74, 0.77, 0.96, 1.17], chg: 58.11, anomaly: "paradoks", note: "LONJAKAN TERTINGGI (58,11%). Produsen besar tapi pasar BBM eceran sepenuhnya bebas tanpa subsidi → harga global langsung masuk 100%.", src: "NPR (3 Mei 2026): $2,98 → $4,446/galon." },
+      { id: "ca", name: "Kanada", flag: "🇨🇦", benua: "Amerika Utara", status: "Eksportir", dist: 11000, lon: -100, lat: 58, p: [0.99, 1.20, 1.28, 1.49], chg: 50.51, anomaly: "paradoks", note: "Naik 50,51%. Seperti AS — produsen besar tapi pasar bebas tanpa subsidi. Naik ~30% Maret→April.", src: "Wikipedia — 2026 Iran war fuel crisis." },
+      { id: "mx", name: "Meksiko", flag: "🇲🇽", benua: "Amerika Utara", status: "Importir", dist: 13500, lon: -102, lat: 23, p: [1.35, 1.35, 1.35, 1.58], chg: 17.04, note: "Importir dengan subsidi parsial → kenaikan moderat." },
+      { id: "br", name: "Brasil", flag: "🇧🇷", benua: "Amerika Selatan", status: "Eksportir", dist: 12000, lon: -52, lat: -10, p: [1.22, 1.23, 1.29, 1.31], chg: 7.38, anomaly: "tahan", note: "Jauh (12.000 km) tapi stabil. 75% kendaraan flex-fuel, campuran bensin standar 30% etanol. Panen tebu rekor ~30 miliar liter.", src: "AP / Washington Post (31 Mar 2026); UNICA." },
+      { id: "ar", name: "Argentina", flag: "🇦🇷", benua: "Amerika Selatan", status: "Importir", dist: 13800, lon: -64, lat: -35, p: [1.08, 1.108, 1.186, 1.52], chg: 40.74, note: "Ekonomi rapuh, peso tidak stabil, subsidi terbatas → kenaikan tinggi." },
+      { id: "cl", name: "Chile", flag: "🇨🇱", benua: "Amerika Selatan", status: "Importir", dist: 14500, lon: -71, lat: -33, p: [1.38, 1.35, 1.27, 1.64], chg: 18.84, note: "Importir penuh namun pasar relatif stabil dengan cadangan." },
+      { id: "au", name: "Australia", flag: "🇦🇺", benua: "Oceania", status: "Eksportir", dist: 11000, lon: 134, lat: -25, p: [1.23, 1.22, 1.74, 1.47], chg: 19.51, note: "Eksportir dengan cadangan strategis cukup; kilang domestik terbatas." },
+      { id: "nz", name: "Selandia Baru", flag: "🇳🇿", benua: "Oceania", status: "Importir", dist: 14200, lon: 174, lat: -41, p: [1.53, 1.51, 1.83, 2.01], chg: 31.37, note: "Importir penuh, jauh dari sumber alternatif → kenaikan cukup tinggi." },
+      { id: "in", name: "India", flag: "🇮🇳", benua: "Asia", status: "Importir", dist: 2200, lon: 79, lat: 22, p: [1.03, 1.04, 1.01, 1.08], chg: 4.85, anomaly: "tahan", note: "Dekat (2.200 km) tapi naik kecil. Diversifikasi agresif ke minyak Rusia diskon (2,14 jt barel/hari, 47% impor) + harga pompa sengaja ditahan pemerintah.", src: "CNBC (Apr 2026); Open Magazine." },
+    ];
+
+    const CONTINENTS = [
+      [[-168,66],[-150,71],[-125,70],[-95,73],[-82,73],[-62,82],[-52,60],[-58,47],[-67,45],[-70,42],[-75,35],[-81,25],[-97,16],[-105,20],[-115,29],[-124,40],[-130,48],[-141,60]],
+      [[-78,8],[-60,10],[-50,0],[-35,-5],[-35,-23],[-48,-25],[-58,-35],[-65,-42],[-72,-52],[-75,-44],[-71,-30],[-70,-18],[-78,-5],[-80,2]],
+      [[-17,15],[-10,30],[10,37],[24,32],[35,30],[43,12],[51,12],[42,-2],[40,-15],[33,-26],[20,-35],[15,-30],[10,-5],[8,4],[-8,5]],
+      [[-10,36],[-9,44],[-2,49],[2,51],[0,58],[10,58],[12,66],[28,70],[40,66],[42,48],[28,42],[20,40],[14,38],[3,42]],
+      [[40,66],[60,71],[90,76],[120,73],[148,71],[162,68],[146,55],[140,45],[130,35],[122,30],[120,22],[105,10],[95,8],[80,8],[68,24],[58,26],[48,30],[45,40],[40,48]],
+      [[95,6],[120,6],[140,1],[150,-9],[130,-10],[110,-9],[100,-3]],
+      [[114,-22],[130,-12],[142,-11],[148,-20],[153,-28],[148,-38],[140,-38],[128,-32],[115,-35],[113,-26]],
+      [[166,-46],[172,-41],[178,-37],[174,-41],[170,-46]],
+    ];
+
+    const HORMUZ = { lon: 56.5, lat: 26.5 };
+    const W = 1000, H = 500;
+
+    /* helpers */
+    const px = (lon) => ((lon + 180) / 360) * W;
+    const py = (lat) => ((90 - lat) / 180) * H;
+    const predict = (d) => 0.00126 * d + 11.68;
+    const spikeColor = (c) => {
+      if (c < 0) return "#3fa7d6";
+      if (c < 10) return "#4cc38a";
+      if (c < 25) return "#f2c14e";
+      if (c < 45) return "#f08a3c";
+      return "#e8503a";
+    };
+
+    /* state */
+    let mode = "status";
+    let selected = null;
+    let hover = null;
+
+    function setMode(m) {
+      mode = m;
+      document.getElementById("mode-status").classList.toggle("on", m === "status");
+      document.getElementById("mode-spike").classList.toggle("on", m === "spike");
+      renderMap();
+      updateLegend();
+    }
+
+    function selectCountry(id) {
+      selected = id;
+      renderDetail();
+      renderMap();
+    }
+
+    function fillFor(c) {
+      return mode === "spike" ? spikeColor(c.chg) : c.status === "Eksportir" ? "#e8503a" : "#3a9ce8";
+    }
+
+    function renderMap() {
+      const svg = document.getElementById("map-svg");
+      svg.innerHTML = "";
+
+      /* defs */
+      const defs = document.createElementNS("http://www.w3.org/2000/svg", "defs");
+      const grad = document.createElementNS("http://www.w3.org/2000/svg", "radialGradient");
+      grad.setAttribute("id", "sea");
+      grad.setAttribute("cx", "55%");
+      grad.setAttribute("cy", "40%");
+      grad.setAttribute("r", "80%");
+      const stop1 = document.createElementNS("http://www.w3.org/2000/svg", "stop");
+      stop1.setAttribute("offset", "0%");
+      stop1.setAttribute("stop-color", "#1c241f");
+      const stop2 = document.createElementNS("http://www.w3.org/2000/svg", "stop");
+      stop2.setAttribute("offset", "100%");
+      stop2.setAttribute("stop-color", "#161311");
+      grad.appendChild(stop1);
+      grad.appendChild(stop2);
+      defs.appendChild(grad);
+      svg.appendChild(defs);
+
+      /* bg */
+      const bg = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+      bg.setAttribute("width", W);
+      bg.setAttribute("height", H);
+      bg.setAttribute("fill", "url(#sea)");
+      bg.setAttribute("rx", "10");
+      svg.appendChild(bg);
+
+      /* graticule */
+      for (let i = 0; i <= 10; i++) {
+        const x = (i * W) / 10;
+        const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+        line.setAttribute("x1", x);
+        line.setAttribute("y1", "0");
+        line.setAttribute("x2", x);
+        line.setAttribute("y2", H);
+        line.setAttribute("stroke", "#241d15");
+        line.setAttribute("stroke-width", "1");
+        svg.appendChild(line);
+      }
+      for (let i = 0; i <= 6; i++) {
+        const y = (i * H) / 6;
+        const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+        line.setAttribute("x1", "0");
+        line.setAttribute("y1", y);
+        line.setAttribute("x2", W);
+        line.setAttribute("y2", y);
+        line.setAttribute("stroke", "#241d15");
+        line.setAttribute("stroke-width", "1");
+        svg.appendChild(line);
+      }
+
+      /* continents */
+      CONTINENTS.forEach((poly) => {
+        const polygon = document.createElementNS("http://www.w3.org/2000/svg", "polygon");
+        polygon.setAttribute("points", poly.map(([lo, la]) => `${px(lo).toFixed(1)},${py(la).toFixed(1)}`).join(" "));
+        polygon.setAttribute("fill", "#2c2419");
+        polygon.setAttribute("stroke", "#3a2f23");
+        polygon.setAttribute("stroke-width", "1.2");
+        polygon.setAttribute("stroke-linejoin", "round");
+        polygon.setAttribute("opacity", "0.92");
+        svg.appendChild(polygon);
+      });
+
+      /* connection lines */
+      COUNTRIES.forEach((c) => {
+        if (selected === c.id || hover === c.id) {
+          const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+          line.setAttribute("x1", px(HORMUZ.lon));
+          line.setAttribute("y1", py(HORMUZ.lat));
+          line.setAttribute("x2", px(c.lon));
+          line.setAttribute("y2", py(c.lat));
+          line.setAttribute("stroke", "#ff8a2b");
+          line.setAttribute("stroke-width", "1.4");
+          line.setAttribute("stroke-dasharray", "4 4");
+          line.setAttribute("opacity", "0.8");
+          svg.appendChild(line);
+        }
+      });
+
+      /* Hormuz epicenter */
+      const pulseRing = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+      pulseRing.setAttribute("cx", px(HORMUZ.lon));
+      pulseRing.setAttribute("cy", py(HORMUZ.lat));
+      pulseRing.setAttribute("r", "6");
+      pulseRing.setAttribute("fill", "none");
+      pulseRing.setAttribute("stroke", "#ff8a2b");
+      pulseRing.setAttribute("stroke-width", "2");
+      pulseRing.classList.add("pulse-ring");
+      svg.appendChild(pulseRing);
+
+      const hormuzDot = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+      hormuzDot.setAttribute("cx", px(HORMUZ.lon));
+      hormuzDot.setAttribute("cy", py(HORMUZ.lat));
+      hormuzDot.setAttribute("r", "5.5");
+      hormuzDot.setAttribute("fill", "#ff8a2b");
+      hormuzDot.setAttribute("stroke", "#fff3e0");
+      hormuzDot.setAttribute("stroke-width", "1.4");
+      svg.appendChild(hormuzDot);
+
+      const hormuzLabel = document.createElementNS("http://www.w3.org/2000/svg", "text");
+      hormuzLabel.setAttribute("x", px(HORMUZ.lon));
+      hormuzLabel.setAttribute("y", py(HORMUZ.lat) - 12);
+      hormuzLabel.setAttribute("fill", "#ffb061");
+      hormuzLabel.setAttribute("font-size", "12");
+      hormuzLabel.setAttribute("font-family", "JetBrains Mono, monospace");
+      hormuzLabel.setAttribute("text-anchor", "middle");
+      hormuzLabel.setAttribute("font-weight", "700");
+      hormuzLabel.textContent = "HORMUZ";
+      svg.appendChild(hormuzLabel);
+
+      /* markers */
+      COUNTRIES.forEach((c) => {
+        const x = px(c.lon), y = py(c.lat);
+        const active = selected === c.id;
+        const hov = hover === c.id;
+        const r = active ? 11 : hov ? 9.5 : 7;
+
+        const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+        g.classList.add("marker");
+        g.style.cursor = "pointer";
+
+        if (active || hov) {
+          const ring = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+          ring.setAttribute("cx", x);
+          ring.setAttribute("cy", y);
+          ring.setAttribute("r", r + 6);
+          ring.setAttribute("fill", fillFor(c));
+          ring.setAttribute("opacity", "0.18");
+          g.appendChild(ring);
+        }
+
+        const dot = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+        dot.setAttribute("cx", x);
+        dot.setAttribute("cy", y);
+        dot.setAttribute("r", r);
+        dot.setAttribute("fill", fillFor(c));
+        dot.setAttribute("stroke", active ? "#fff" : "#13100c");
+        dot.setAttribute("stroke-width", active ? 2 : 1.5);
+        g.appendChild(dot);
+
+        if (c.anomaly) {
+          const anomDot = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+          anomDot.setAttribute("cx", x);
+          anomDot.setAttribute("cy", y);
+          anomDot.setAttribute("r", r - 3);
+          anomDot.setAttribute("fill", "none");
+          anomDot.setAttribute("stroke", "#fff");
+          anomDot.setAttribute("stroke-width", "1");
+          anomDot.setAttribute("opacity", "0.85");
+          g.appendChild(anomDot);
+        }
+
+        if (hov || active) {
+          const w = c.name.length * 7.4 + 46;
+          const bgRect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+          bgRect.setAttribute("x", x + 10);
+          bgRect.setAttribute("y", y - 22);
+          bgRect.setAttribute("width", w);
+          bgRect.setAttribute("height", "22");
+          bgRect.setAttribute("rx", "5");
+          bgRect.setAttribute("fill", "#0d0b08");
+          bgRect.setAttribute("stroke", "#3a2f23");
+          g.appendChild(bgRect);
+
+          const label = document.createElementNS("http://www.w3.org/2000/svg", "text");
+          label.setAttribute("x", x + 16);
+          label.setAttribute("y", y - 7);
+          label.setAttribute("fill", "#f4ead8");
+          label.setAttribute("font-size", "11");
+          label.setAttribute("font-family", "JetBrains Mono, monospace");
+          label.textContent = `${c.name} · ${c.chg > 0 ? "+" : ""}${c.chg}%`;
+          g.appendChild(label);
+        }
+
+        g.onclick = (e) => {
+          e.stopPropagation();
+          selectCountry(c.id);
+        };
+        g.onmouseenter = () => { hover = c.id; renderMap(); };
+        g.onmouseleave = () => { hover = null; renderMap(); };
+
+        svg.appendChild(g);
+      });
+    }
+
+    function renderDetail() {
+      const panel = document.getElementById("detail-panel");
+      if (!selected) {
+        panel.innerHTML = `<div class="empty"><div class="big">◎</div><p>Klik salah satu negara di peta untuk melihat data harga, model regresi, dan analisis anomalinya.</p></div>`;
+        return;
+      }
+
+      const c = COUNTRIES.find((x) => x.id === selected);
+      if (!c) return;
+
+      const pred = predict(c.dist);
+      const resid = c.chg - pred;
+      const chgColor = c.chg < 0 ? "#3fa7d6" : c.chg < 10 ? "#4cc38a" : c.chg < 25 ? "#f2c14e" : c.chg < 45 ? "#f08a3c" : "#e8503a";
+      const statusColor = c.status === "Eksportir" ? "#e8503a" : "#3a9ce8";
+
+      let html = `
+        <div class="detail-top">
+          <span class="flag">${c.flag}</span>
+          <div>
+            <div class="cname">${c.name}</div>
+            <div class="badges">
+              <span class="badge" style="color: ${statusColor}; border-color: ${statusColor};">${c.status}</span>
+              <span class="badge">${c.benua}</span>
+              <span class="badge">${c.dist.toLocaleString("id-ID")} km dari Hormuz</span>
+            </div>
+          </div>
+        </div>
+      `;
+
+      if (c.anomaly) {
+        const bgColor = c.anomaly === "tahan" ? "rgba(76,195,138,.15)" : "rgba(232,80,58,.15)";
+        const color = c.anomaly === "tahan" ? "#7ee0aa" : "#ff8c78";
+        const label = c.anomaly === "tahan" ? "⬇ ANOMALI: TAHAN KRISIS" : "⬆ ANOMALI: PARADOKS";
+        html += `<div style="margin-top: 14px;"><span class="anombadge" style="background: ${bgColor}; color: ${color};">${label}</span></div>`;
+      }
+
+      html += `
+        <div class="bigchg" style="color: ${chgColor};">${c.chg > 0 ? "+" : ""}${c.chg}%</div>
+        <div style="color: var(--muted); font-size: 12px; font-family: 'JetBrains Mono', monospace;">LONJAKAN HARGA BBM · JAN → APR 2026</div>
+
+        <div class="chart-container">
+          <canvas id="price-chart"></canvas>
+        </div>
+
+        <div class="row">
+          <div class="mini"><small>Harga Jan</small><b>$${c.p[0].toFixed(2)}</b></div>
+          <div class="mini"><small>Harga Apr</small><b>$${c.p[3].toFixed(2)}</b></div>
+        </div>
+
+        <div class="row">
+          <div class="mini"><small>Prediksi Model</small><b>${pred.toFixed(1)}%</b></div>
+          <div class="mini"><small>Residual (Aktual − Model)</small><b style="color: ${Math.abs(resid) > 20 ? "#e8503a" : "var(--cream)"}">${resid > 0 ? "+" : ""}${resid.toFixed(1)}%</b></div>
+        </div>
+
+        <div class="note ${c.anomaly ? "anom-" + c.anomaly : ""}">
+          ${c.note}
+          ${c.src ? `<div class="src">📎 ${c.src}</div>` : ""}
+        </div>
+      `;
+
+      panel.innerHTML = html;
+
+      /* chart */
+      const ctx = document.getElementById("price-chart");
+      if (ctx && typeof Chart !== "undefined") {
+        new Chart(ctx, {
+          type: "line",
+          data: {
+            labels: ["Jan", "Feb", "Mar", "Apr"],
+            datasets: [{
+              label: "Harga (USD/L)",
+              data: c.p,
+              borderColor: chgColor,
+              backgroundColor: chgColor + "22",
+              borderWidth: 2.5,
+              fill: true,
+              tension: 0.3,
+              pointRadius: 4,
+              pointBackgroundColor: chgColor,
+              pointBorderColor: "#fff",
+              pointBorderWidth: 1,
+            }],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: { display: false },
+            },
+            scales: {
+              y: {
+                grid: { color: "#2e251b" },
+                ticks: { color: "#9c8a74", font: { family: "JetBrains Mono" } },
+              },
+              x: {
+                grid: { display: false },
+                ticks: { color: "#9c8a74", font: { family: "JetBrains Mono" } },
+              },
+            },
+          },
+        });
+      }
+    }
+
+    function updateLegend() {
+      const legend = document.getElementById("legend");
+      if (mode === "status") {
+        legend.innerHTML = `
+          <span><i style="background: #e8503a;"></i>Eksportir neto</span>
+          <span><i style="background: #3a9ce8;"></i>Importir neto</span>
+          <span><i style="background: transparent; border: 1px solid #fff; border-radius: 50%;"></i>⭕ = anomali kunci</span>
+        `;
+      } else {
+        legend.innerHTML = `
+          <span><i style="background: #3fa7d6;"></i>Turun</span>
+          <span><i style="background: #4cc38a;"></i>&lt;10%</span>
+          <span><i style="background: #f2c14e;"></i>10–25%</span>
+          <span><i style="background: #f08a3c;"></i>25–45%</span>
+          <span><i style="background: #e8503a;"></i>&gt;45%</span>
+        `;
+      }
+    }
+
+    /* init */
+    document.getElementById("map-svg").onclick = () => {
+      selected = null;
+      renderMap();
+      renderDetail();
+    };
+
+    renderMap();
+    renderDetail();
+    updateLegend();
+
+    document.getElementById("stat-n").textContent = COUNTRIES.length;
+    const mean = (COUNTRIES.reduce((a, c) => a + c.chg, 0) / COUNTRIES.length).toFixed(2);
+    document.getElementById("stat-mean").textContent = mean + "%";
+  </script>
+</body>
+</html>
